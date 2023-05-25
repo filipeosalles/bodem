@@ -1,0 +1,88 @@
+{% extends "layout.html" %}
+{% block corpo %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">MODULE 3 - Calculation of pF at 75% of field capacity</h1>
+
+</div>
+<div class="row">
+    <div class="col-md-6">
+        <div id="error" class="alert alert-danger align-items-center" style="display:none;">
+            <svg class="bi flex-shrink-0 me-2" width="24" height="24" role="img" aria-label="Danger:">
+                <use xlink:href="#exclamation-triangle-fill"/>
+            </svg>
+            <div id="error-message">
+            </div>
+        </div>
+        {% if not session.get('result') %}
+        <div class="alert alert-danger align-items-center">
+            <div>
+                 You must give entries with values (%sand, %silt and %clay) in Module 1, otherwise it will not work.
+            </div>
+        </div>
+        {% endif %}
+
+<span style="font-size:18px"><strong>MODULE 3</strong></span></p>
+
+<span style="font-size:16px">
+
+<p><br />
+- Soil texture characterisation is given: %sand, %silt, %clay and %o.m.<br />
+- MWHC is given.<br />
+- Moisture content is given as 75% of field capacity.<br />
+<br />
+1. Enter the percentages of sand, silt, clay and organic matter in Module 1 of the App. In the Output box of Module 1, your soil has now been assigned a soil texture class.<br />
+<br />
+2. Skip Module 2 and go to Module 3. In Module 3 of the App, enter the field capacity &theta;fc (moisture content at field capacity). The field capacity is a moisture content, it should be entered here in %.<br />
+<br />
+3. In the next cell (list box), select whether this field capacity is expressed in w/w units (gravimetric water content) or in v/v units (volumetric water content). Select a value from the list.<br />
+<br />
+4. In the Output cell of Module 3, the pF of the test soil at 3/4 of field capacity is shown.<br />
+<br />
+</span>
+
+        <form method="post" action="" id="formCalculate" class="form-horizontal" role="form">
+            <div class="form-floating mb-3">
+                <input type="number" step="any" name="field_capacity" required="required" class="form-control input" id="field_capacity"
+                       placeholder="Field capacity" value="{{ session['extra3']['field_capacity'] or 0  }}">
+                <label for="field_capacity">Field capacity</label>
+            </div>
+
+            <div class="form-floating mb-3">
+                <select class="form-select" name="type_mwhc" required id="type_mwhc">
+                    {% for item in data['type_mwhc'] %}
+                        <option {{ 'selected' if item['id'] == session['extra2']['type_mwhc'] else '' }} value="{{item['id']}}">{{item['name']}}</option>
+                    {% endfor %}
+                </select>
+                <label for="type_mwhc">Volumetric or gravimetric MWHC?</label>
+            </div>
+            <div class="d-grid gap-2">
+                <button type="submit" id="btnSave" class="btn btn-primary">Calculate</button>
+            </div>
+        </form>
+    </div>
+    <div class="col-md-6">
+        <h4>Output</h4>
+        <table class="table table-sm">
+            <tr>
+                 <th>Actual moisture content at pF (θfc_act)</th>
+                <td>{{session.get('result_extra3')['ofc_act_v_v']}}</td>
+            </tr>
+             <tr>
+                 <th>Actual moisture content at ¾pF</th>
+               <td>{{session.get('result_extra3')['ofc_act_75']}}</td>
+            </tr>
+             <tr class="bg-warning">
+                 <th>pF at 75% of θfc</th>
+               <td>{{session.get('result_extra3')['pF_at_75_θact']}}</td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+<br />   
+<br />   
+{% endblock %}
+
+{% block js %}
+<script src="{{ url_for('static', filename='extra3.js') }}" type="text/javascript"></script>
+{% endblock %}

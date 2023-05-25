@@ -1,0 +1,459 @@
+	{% extends "layout.html" %}
+{% block corpo %}
+<br><br>
+    <h2> Soil Map</h2>
+<br><br>
+
+<!--
+
+<p><span style="font-size:20px"><strong>Main purpose of this Soil Map:</strong></span></p>
+
+<p>&nbsp;</p>
+
+<p><span style="font-size:18px">Soils are known to be heterogeneous across fields, and this plays an important role in soil moisture variability. By knowing the spatial variability of soil profile on an field, localized and precise irrigation scheduling can be performed, thus avoiding under- and over-irrigation, which can result in plant water stress or nutrient leaching. Improved irrigation scheduling techniques that use soil moisture sensors to control irrigation events can greatly increase irrigation water use efficiency.</span></p>
+
+<p><span style="font-size:18px"><strong>This App proposes guidelines for soil moisture that account for spatial soil profile variability, which helps to determine the minimum number of soil moisture sensors required to survey and monitor a specific area for irrigation.</strong></span></p>
+
+
+<span style="font-size:18px"><strong>SOIL MAP - COMPLETE REPORT:</strong></span><br />
+<br />
+<span style="font-size:16px">
+Enter the farm coordinates (entering or copying from a CSV file) or google .kml file to get the map and informations<br />
+<br />
+<div align="left">
+<p><strong><span style="font-size:18px">IMPORTANT: </span></strong><span style="font-size:18px">Here we are using Well-known text (WKT) representation of coordinate reference systems - EPSG:28992 Projected coordinate system for Netherlands.</span></p>
+
+<p><span style="font-size:18px">If you want to use the conventional GPS system, you will need to use the Web App through a .kml file, as explained below.</span></p>
+</div>
+
+<br />
+<br />
+<p><span style="font-size:18px"><strong>How to get a&nbsp;.kml file?</strong></p>
+
+<p><br />
+1) Go to <a href="https://earth.google.com/" target="_blank">Google Earth</a> (https://earth.google.com/).<br />
+2) Go to "Search".<br />
+3) Enter two coordinates (longitude and latitude) of some point on the farm. This coordinate can be found easily using a smartphone.<br />
+4) Click &quot;Draw lines or shapes&quot; at the bottom left of Google Earth.<br />
+5) After drawing the lines of the farm, click on &quot;Save Project&quot;, then &quot;New Project&quot; and choose the name that best suits you. Click &quot;Save&quot;.<br />
+6) A new box will appear automatically. Give your polygon a name.<br />
+7) In your project (which you just named) click on the &quot;three dots&quot; at the top right of the tab and click on &quot;Export as KML file&quot;.<br />
+8) Ready, now just save on your computer or smartphone and then insert in the appropriate place in the tab &quot;Soil Map - Complete&quot; in our App.<br />
+
+<br />
+By doing this, you will be able to access the following data:<br />
+<br />
+1) Land data in percentages, according to BOFEK2020, BOFEK2022 and Staringreeks.<br />
+2) Map with the farm&#39;s soil profiles.<br />
+4) Indication of how many sensors will be needed in the farm.<br />
+5) Information on water capacity and limits for the given farm.<br />
+<br />
+</span>
+
+
+-->
+
+<div class="row">
+    <div class="col-md-12">
+        <div id="error" class="alert alert-danger align-items-center" style="display:none;">
+            <svg class="bi flex-shrink-0 me-2" width="24" height="24" role="img" aria-label="Danger:">
+                <use xlink:href="#exclamation-triangle-fill"/>
+            </svg>
+            <div id="error-message">
+            </div>
+        </div>
+
+        <form method="post" action="" id="formCalculate" class="form-horizontal" role="form"
+              enctype="multipart/form-data">
+            <label>Insert the coordinates:</label>
+            <div class="input-group mb-3" v-for="(item, index) in items">
+                <input type="number" step="any" name="coordinates[]" v-model="item.x" class="form-control" required
+                       placeholder="Coordinate 1">
+                <span class="input-group-text">,</span>
+                <input type="number" step="any" name="coordinates[]" v-model="item.y" class="form-control" required
+                       placeholder="Coordinate 2">
+            </div>
+            <div class="input-group mb-3">
+                <textarea class="form-control" @change="parseCsv" placeholder="Paste here csv content"
+                          v-model="csv"></textarea>
+            </div>
+            <div class="mb-3">
+                <label class="form-label" for="file">Upload file .kml</label>
+                <input class="form-control" name="file" id="file" type="file">
+            </div>
+
+
+            <div class="d-grid gap-2 mt-3">
+                <button type="button" @click="addCoordinate" class="btn btn-success">Add coordinate</button>
+            </div>
+
+            <div class="d-grid gap-2 mt-3">
+                <button type="button" @click="useDemo" class="btn btn-warning">Fill Demo</button>
+            </div>
+
+            <div class="d-grid gap-2 mt-3">
+                <button type="button" @click="resetForm" class="btn btn-danger">Reset Form</button>
+            </div>
+
+            <div class="d-grid gap-2 mt-3">
+                <button type="submit" id="btnSave" class="btn btn-primary">Calculate</button>
+            </div>
+            {% if b_result|length > 0 %}
+            <div class="d-grid gap-2 mt-3">
+                <button type="button" data-bs-toggle="modal" data-bs-target="#exampleModal"  id="btnExport" class="btn btn-danger"><span
+                        class="fa fa-file-pdf-o"></span> Export to PDF
+                </button>
+            </div>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Name of Farm</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="input-group mb-3">
+                        <input class="form-control" id="name_of_farm" placeholder="Enter the name of your farm"/>
+            </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="convertHTMLFileToPDF()">Generate</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<div id="soil-map-print">
+
+    <div class="col-md-12 text-center mt-3">
+        <br><br>
+        <h2>SOIL MAP - Output</h2>
+        <br><br>
+        
+        {% if img != '' %}
+        <img src="{{ url_for('static', filename='/image/plot.png') }}" width="50%">
+        {% endif %}
+        
+        
+<span class="page-break"></span> 
+
+
+<br><br>
+<h2>Water requirements in each soil profile</h2>     
+<br><br>
+
+<p style="text-align: left;"><span style="font-size:18px"><strong>IMPORTANT</strong></span></p>
+
+<p style="text-align: left;"><span style="font-size:18px">In the bar plot below it is possible to see (in green) the optimal value for the plant to obtain water from the soil. When buying a soil moisture sensor, you should always be careful to have your sensor measurement between the two values that limit the green area:</span></p>
+
+<p style="text-align: left;"><span style="font-size:18px"><strong>Point 1 - </strong>less water - wilting point - Verwelkingspunt<br />
+<strong>Point 2 -</strong> excess water - Field capacity - Veldcapaciteit</span></p>
+
+<p style="text-align: left;"><strong><span style="font-size:18px">Your soil moisture sensor should always show the value between these two limits for good water management.</span></strong></p>
+<br>
+
+<span class="page-break"></span>
+        <div>
+            {% for b in b_result %}
+            <div class="col-md-6 mb-4">
+            <center>
+                <img src="{{ url_for('static', filename='/image/soilmap/'+b|lower+'.png') }}" width="130%"><br>
+                <strong>{{soil_map_text[b]}}</strong>                
+            </center>
+            </div>
+            <span class="page-break"></span>
+            {% endfor %}             
+
+            {% if b_result|length > 0 %}
+        
+
+
+
+        
+            <div class="col-md-12">
+                <br><br>
+                <h2>How many sensors do you need on your farm?</h2>
+                <br><br>
+            </div>
+     
+<p><strong><span style="font-size:18px">IDENTIFYING AREAS WITH HOMOGENOUS SOIL MOISTURE - SOIL MOISTURE SENSOR PLACEMENT</span></strong></p>
+
+<p>&nbsp;</p>
+
+<p style="text-align: left;"><span style="font-size:18px">The minimum number of soil moisture sensors for irrigation or monitoring of a given area can be estimated by using the range value obtained from the geostatistical analysis. The range value is where the soil profile does not differ from the neighboring profile by more than 9% for pF-4.2 curve (wilting point). The exception is the case of moerig B17-B18 due to the high value of organic matter.</span></p>
+<br>   
+<br>   
+            <div class="col-md-12">
+                <p class="alert alert-info" style="font-size:18px">
+                    You need <span class="sensors">[{{b_result|length}}]</span> sensors on your land. One for each zone
+                    shown on the map, as shown in the chart below.
+                </p>
+            </div>
+            
+            
+            <div class="col-md-2"></div>
+            
+    <span style="font-size:16px">                    
+<p align="Left">You must place a sensor in each zone determined in the Soil Profile above. In each of the B&#39;s. </p>
+
+<p align="Left"><strong>Example:</strong> if there are two soil profiles: B1 and B15, you must place a sensor in each area. But if they are B1 and B2, you should put only one, because B1 and B2 belong to the same group.</p>
+
+<p align="Left">The groups are divided into</p>
+
+<p align="Left"><strong>Group 1: B1-B2-B3-B4-B6<br />
+Group 2: B5<br />
+Group 3: B7-B8-B9<br />
+Group 4: B10-B11-B12<br />
+Group 5: B13-B14<br />
+Group 6: B15-B16-B17-B18</strong></p>
+
+<p align="Left">The groups where you should place are indicated below by the arrow. If there is only one arrow, you should place only one sensor in this sector indicated on the BOFEK2020 map. If there are two arrows, you must place two sensors in the sectors indicated on the BOFEK2020 map. And so on.</p>
+<hr />
+</span>          
+            <div class="col-md-2"></div>
+            <div class="col-md-8" style="padding:0">
+                <canvas id="bodemprofiel" width="100%" height="100%"></canvas>
+                <img id="bodemprofiel-img" src="{{ url_for('static', filename='image/soilmap/bodemprofiel.jpg') }}"
+                     width="100%">
+            </div>
+            <div class="col-md-2"></div>
+
+            {% endif %}
+            
+        </div>
+    </div>
+
+
+<span class="page-break"></span>
+
+
+
+
+    <br><br>
+    <h2>Soil Moisture Sensor Installation Process</h2>
+    <br><br>
+   
+    
+    
+    
+
+<p>
+1) See the main regions on the map and, using the number of sensors indicated above, choose a representative location away from the edges, but towards the center of each area.<br />
+<br />
+2) Select a location that represents the majority of the crop growing conditions on the field.<br />
+<br />
+3) Install the sensor in between two plants within the crop row.<br />
+<br />
+4) During sensor installation, avoid damaging the plants that will be in close proximity to the sensor.<br />
+<br />
+5) Ensure there is good sensor-to-soil contact.<br />
+<br />
+6) Avoid air pockets between the soil and the sensor.Avoid installing the sensor in a waterway.<br />
+<br />
+7) Check manufacturer’s instructions for installation; some sensors, especially soil matric potential-based sensors, must be placed in water for 24 hours prior to installation.<br />
+<br />
+8) Install soil sensors 20 to 30 days after planting. But this value of days will depend on the crop.<br />
+
+
+
+
+<span class="page-break"></span>
+
+<br><br>
+<h2>Farm parameters</h2>
+<br><br>
+
+<p> 
+        
+        <table class="table table-bordered table-striped table-sm mt-3 mb-3">
+            <tr>
+                <th></th>
+                {% for column in columns %}
+                <th>{{column}}</th>
+                {% endfor %}
+            </tr>
+            {% for row in rows %}
+            <tr>
+                {% for item in row %}
+                <td>{{item}}</td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </table>
+
+
+
+
+<span class="page-break"></span>
+
+<br><br>
+<h2>Water/Soil</h2>
+<br><br>
+
+<p><span style="font-size:20px"><strong>Below are some information and characteristics about each soil profile belonging to the Staringreeks database</strong></span></p>
+
+<p>&nbsp;</p>
+
+<p><span style="font-size:16px"><strong>B1-B2-B3-B4-B5-B6 - Sand Soil</strong></p>
+
+<p>The term sandy soil is a collective name for different soil types. We speak of sandy soil if mineral soils contain less than 8% lutum and consist of more than 50% sand. Within the Dutch system of soil classification we have various soil types that are counted as sandy soils, including ground soils and podzol soils. Characteristic of sandy soils is their good permeability.</p>
+
+<p>Sandy soils strongly depend on organic matter for nutrient supply. In these soils availability of nutrients is largely determined by interactions between soil life and soil organic matter.</p>
+
+<p>The advantage of this is that the land is still easy to work in the fall. The downside is that moisture and nutrients quickly disappear to the surface. That means lower soil fertility and lower crop yields. But also a higher nitrate leaching to the groundwater, which is a threat to drinking water reserves. The expectation is that the moisture, nutria and mineral balance of the sandy bottom will improve if it is enriched with clay.</p>
+
+<p>The direct effect of an increase of the organic matter content on water availability is especially relevant in a group of sandy soils with an organic matter percentage lower than 3%</p>
+
+<p>Poor sandy soils with 0,5 up to 1 % organic matter will render, with an increase of 1 % organic matter, an increase of 3 &ndash; 4 mm available water in a root zone with a thickness of 20 cm. This roughly equals one day extra transpiration.</p>
+
+<p>In the trajectory from &gt; 3 % organic matter, an increase of 1 % organic matter leads to an increase of 1 mm available water in a root zone of 20 cm (sand).</p>
+
+<p>In a dry summer, in which the precipitation deficit continuously increases, extra water availability will have little effect. However, &nbsp;in a moderately dry summer with a regular shower, extra water availability of 3-4 mm can be used multiple times and it could lead to postponing a sprinkler irrigation application of &nbsp;20 &ndash; 25 mm (Bodemvocht gestuurd beregenen) or to not apply this at all.</p>
+
+<p><span style="font-size:16px"><strong>B7-B8-B9 - Sandy Loam</strong></span></p>
+
+<p>Sandy loam comes in three different forms, namely very light loam (B7), moderately light loam (B8) and heavy loam (B9). You will find this soil in particular in Zeeland, along rivers and in the north of the Netherlands. It is a combination of clay soil and sandy soil. The difference with loam soil is that there is about 20% more sand in the soil.&nbsp;</p>
+
+<p>This soil also can have large amount of humus. Humus ensures that plants can root deeper. Humus is also an organic food (you add this to other soil types to make them more fertile).</p>
+
+<p>When there is a lot of rain, the soil can become too moist and it is difficult to get the moisture away</p>
+
+<p><strong><span style="font-size:16px">B10-B11-B12 - Clay soil</span></strong></p>
+
+<p>Clay soil occurs in three different forms in the Netherlands, namely light clay (B10), moderately heavy clay (B11) and heavy clay (B12). Clay soil is recognizable by its smooth fixed structure and that it sticks together. Both light and heavy clay soil is very fertile, but also difficult to work. In contrast to sandy soil there is very little air between the particles. This keeps it very good moisture.</p>
+
+<p>In the summer, when it is dry for a longer period of time you will see that clay soil is going to tear and shrink, this is because the ground then dries out. In the fall and winter when it rains more and is more humid, clay soil becomes heavy, solid and sticky.</p>
+
+<p><strong><span style="font-size:16px">B13-B14 - Loamy soil</span></strong></p>
+
+<p>Loamy soil is unfortunately not found in many places in the Netherlands. A large area of loamy soil can be found in the south of Limburg in particular. Loam soil is a combination between sandy and clay soil. It contains the good qualities of both types of soil. This soil is easy to work with and also very fertile. The great thing about this soil is that it retains sufficient moisture and that the excess moisture disappears further into the soil.</p>
+
+<p><strong><span style="font-size:16px">B15-B16-B17-B18 - Peaty Soil</span></strong></p>
+
+<p>The Netherlands has a number of places where larger areas of peat soil occur. This type of soil occurs in particular in South Holland, North Holland, Overijssel and Friesland. A large part of peat soil consists of organic material, mainly dead plant remains. Peat soil can be recognized by its black color and feels spongy. The dead plant remains in the soil make this soil rich in nutrients.</p>
+
+<p>When it rains a lot, peat soil can have trouble draining moisture. Peat soil itself has a higher acid content, so it is important to add the right amounts of lime to the soil, you do this in the months of December, January and February. In the months of February and March it is good to add compost and to fertilize extra in March and April.</p>
+
+<p>In the Netherlands many grass-covered clayey peat and peaty clay soils are susceptible to drought and difficult to wet after a prolonged dry period. When dry, these soils are water repellent. Precipitation can flow rapidly through shrinkage cracks towards the subsoil, bypassing the matrix of the peat.</p>
+
+<p>Physical properties: These soils are poorly drained. Rooting depths are shallow and the water table is generally close to the surface. Water logging and/or flooding often limits productivity in wet years.&nbsp;</p>
+
+<p>Tillage and water management: Flood hazard, poor drainage and high water tables/shallow rooting depth are the main limitations to cropping on these peaty clays. They have a moderate to good water-holding capacity. Establishing mole drains is an option to improve subsoil drainage.</p>
+</span>
+
+<br />
+
+</div>
+
+
+
+<br />   
+<br /> 
+<br /> 
+<span class="page-break"></span>
+{% endblock %}
+
+{% block css %}
+<style>
+     #bodemprofiel {
+            width:100%;
+            height:100%;
+            position:absolute
+            border: 1px solid red;
+        }
+     #bodemprofiel-img {
+            display:none;
+        }
+        .sensors{
+            font-weight: 600
+
+        }
+
+</style>
+{% endblock %}
+
+{% block js %}
+<script>
+    var POSITIONS = JSON.parse('{{b_position | tojson}}');
+
+</script>
+<script src="{{ url_for('static', filename='soil-map.js', v='1') }}" type="text/javascript"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.3.5/jspdf.min.js"></script>
+<script src="https://unpkg.com/2cs-canvas2image@0.0.2/canvas2image.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.0.0-alpha.1/axios.min.js"
+        integrity="sha512-xIPqqrfvUAc/Cspuj7Bq0UtHNo/5qkdyngx6Vwt+tmbvTLDszzXM0G6c91LXmGrRx8KEPulT+AfOOez+TeVylg=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="{{ url_for('static', filename='kendo.all.min.js', v='1') }}" type="text/javascript"></script>
+<script type="x/kendo-template" id="page-template">
+    <div class="page-template">
+        <div class="header">
+            <img src="{{ url_for('static', filename='/image/logo.jpeg') }}" alt  style="max-height:30px; position:absolute; top:-30px;"/>
+            <img src="{{ url_for('static', filename='/image/logo-footer.jpeg') }}" alt  style="max-height:30px; position:absolute; top:-30px; right:10px"/>
+        </div>
+
+    </div>
+</script>
+
+<script>
+    var COORDS = JSON.parse('{{coordinates | tojson | safe}}');
+    new Vue({
+      el: '#app',
+     delimiters : ['[[', ']]'],
+      data: {
+        csv: '',
+        items: [],
+        demo: [
+          {x: 250707, y:538730},
+          {x: 251014, y:538385},
+          {x: 251094, y:538430},
+          {x: 250774, y:538798},
+          {x: 250707, y:538730},
+        ]
+      },
+      mounted(){
+          if (COORDS.length > 0){
+            this.items =  COORDS
+          }else{
+            //this.addCoordinate()
+          }
+      },
+      methods: {
+           addCoordinate(){
+               this.items.push({x: '', y: ''})
+           },
+           useDemo(){
+                this.items = JSON.parse(JSON.stringify(this.demo))
+           },
+           resetForm(){
+                let app = this
+                axios.get('/reset-soil-map')
+               .then(function(response) {
+                    app.items = []
+                    app.csv = ''
+               })
+               .catch((err) => alert('Error Reset'))
+           },
+           parseCsv(){
+               let app = this
+               axios.post('/parse-csv', {csv: this.csv})
+               .then(function(response) {
+                    console.log(response.data)
+                    app.items = JSON.parse(JSON.stringify(response.data.coordinates))
+                    //app.csv = ''
+               })
+               .catch((err) => alert('CSV crashed'))
+           }
+      }
+    });
+
+
+
+</script>
+{% endblock %}
